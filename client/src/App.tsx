@@ -29,17 +29,25 @@ function Router() {
     const unsubscribe = auth.onAuthStateChanged(async (user) => {
       setUser(user);
       if (user) {
-        // Fetch user role from your backend
         try {
+          // Add console.log to debug
+          console.log('User authenticated:', user.uid);
           const response = await fetch(`/api/users/me`, {
             headers: {
-              'x-firebase-id': user.uid
+              'Authorization': `Bearer ${await user.getIdToken()}`,
+              'Content-Type': 'application/json'
             }
           });
+          if (!response.ok) {
+            throw new Error('Failed to fetch user data');
+          }
           const userData = await response.json();
+          console.log('User data:', userData); // Debug log
           setUserRole(userData.role);
         } catch (error) {
           console.error('Error fetching user role:', error);
+          // Handle error gracefully
+          setUserRole(null);
         }
       } else {
         setUserRole(null);
@@ -50,6 +58,9 @@ function Router() {
     return () => unsubscribe();
   }, []);
 
+  // Add debug logs
+  console.log('Current state:', { user, userRole, loading });
+
   if (loading) {
     return (
       <div className="h-screen w-full flex items-center justify-center">
@@ -59,7 +70,11 @@ function Router() {
   }
 
   const getDashboard = () => {
-    if (!user) return <LandingPage />;
+    if (!user) {
+      console.log('No user, returning to landing page');
+      return <LandingPage />;
+    }
+    console.log('Rendering dashboard for role:', userRole);
     return userRole === 'doctor' ? <DoctorDashboard /> : <PatientDashboard />;
   };
 
