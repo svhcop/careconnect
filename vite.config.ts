@@ -53,6 +53,12 @@ export default defineConfig({
     strictPort: true,
     hmr: {
       overlay: true,
+      clientPort: 3000
     },
   },
+  preview: {
+    port: 3000,
+    strictPort: false,
+  },
+  base: '/',
 });
