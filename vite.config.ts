@@ -39,7 +39,10 @@ export default defineConfig({
     },
     reportCompressedSize: false,
     chunkSizeWarningLimit: 1000,
-    emptyOutDir: true
+    emptyOutDir: true,
+    assetsDir: 'assets',
+    cssCodeSplit: true,
+    sourcemap: true
   },
   optimizeDeps: {
     include: ['react', 'react-dom', 'wouter'],
