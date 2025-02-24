@@ -5,17 +5,18 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Search, Calendar } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { Spinner } from "@/components/ui/spinner";
 
 export default function SearchPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const { toast } = useToast();
 
-  const { data: doctors, isLoading } = useQuery({
+  const { data: doctors, isLoading, error } = useQuery({
     queryKey: ["/api/users/doctors"],
     enabled: true,
   });
 
-  const filteredDoctors = doctors?.filter(doctor => 
+  const filteredDoctors = (doctors as any[] || []).filter(doctor =>
     doctor.displayName?.toLowerCase().includes(searchQuery.toLowerCase()) ||
     doctor.specialty?.toLowerCase().includes(searchQuery.toLowerCase())
   ) ?? [];
@@ -51,7 +52,14 @@ export default function SearchPage() {
       </div>
 
       {isLoading ? (
-        <div>Loading doctors...</div>
+        <div className="text-center py-8">
+          <Spinner className="w-8 h-8 mx-auto mb-4" />
+          <p className="text-muted-foreground">Loading doctors...</p>
+        </div>
+      ) : error ? (
+        <div className="text-center py-8 text-destructive">
+          <p>Failed to load doctors. Please try again later.</p>
+        </div>
       ) : (
         <div className="space-y-4">
           {filteredDoctors.map((doctor) => (
@@ -69,9 +77,14 @@ export default function SearchPage() {
             </Card>
           ))}
           
-          {filteredDoctors.length === 0 && (
-            <div className="text-center text-muted-foreground">
-              No doctors found matching your search.
+          {!isLoading && !error && filteredDoctors.length === 0 && (
+            <div className="text-center py-8">
+              <p className="text-lg font-medium mb-2">No doctors found</p>
+              <p className="text-muted-foreground">
+                {searchQuery
+                  ? "Try different search terms or specialty"
+                  : "Start typing to search for doctors"}
+              </p>
             </div>
           )}
         </div>

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import React, { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -30,6 +30,13 @@ const profileSchema = z.object({
   phoneNumber: z.string().min(10),
   specialty: z.string().optional(),
   bio: z.string().optional(),
+  profilePicture: z.string().optional(),
+  // Additional fields for doctors
+  medicalLicense: z.string().optional(),
+  education: z.string().optional(),
+  certifications: z.string().optional(),
+  yearsOfExperience: z.string().optional(),
+  languages: z.string().optional(),
 });
 
 export default function ProfileSettings() {
@@ -44,12 +51,35 @@ export default function ProfileSettings() {
   const form = useForm<z.infer<typeof profileSchema>>({
     resolver: zodResolver(profileSchema),
     defaultValues: {
-      displayName: user?.displayName || "",
-      phoneNumber: user?.phoneNumber || "",
-      specialty: user?.specialty || "",
+      displayName: "",
+      phoneNumber: "",
+      specialty: "",
       bio: "",
+      profilePicture: "",
+      medicalLicense: "",
+      education: "",
+      certifications: "",
+      yearsOfExperience: "",
+      languages: "",
     },
   });
+
+  React.useEffect(() => {
+    if (user) {
+      form.reset({
+        displayName: (user as any).displayName || "",
+        phoneNumber: (user as any).phoneNumber || "",
+        specialty: (user as any).specialty || "",
+        bio: (user as any).bio || "",
+        profilePicture: (user as any).profilePicture || "",
+        medicalLicense: (user as any).medicalLicense || "",
+        education: (user as any).education || "",
+        certifications: (user as any).certifications || "",
+        yearsOfExperience: (user as any).yearsOfExperience || "",
+        languages: (user as any).languages || "",
+      });
+    }
+  }, [user, form]);
 
   const onSubmit = async (values: z.infer<typeof profileSchema>) => {
     try {
@@ -133,7 +163,7 @@ export default function ProfileSettings() {
                 )}
               />
 
-              {user?.role === "doctor" && (
+              {(user as { role?: string })?.role === "doctor" && (
                 <FormField
                   control={form.control}
                   name="specialty"
@@ -165,6 +195,45 @@ export default function ProfileSettings() {
 
               <FormField
                 control={form.control}
+                name="profilePicture"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Profile Picture</FormLabel>
+                    <FormControl>
+                      <div className="flex items-center space-x-4">
+                        {field.value && (
+                          <img
+                            src={field.value}
+                            alt="Profile"
+                            className="h-20 w-20 rounded-full object-cover"
+                          />
+                        )}
+                        <Input
+                          type="file"
+                          accept="image/*"
+                          onChange={async (e) => {
+                            const file = e.target.files?.[0];
+                            if (file) {
+                              // Here you would typically upload to your storage service
+                              // and get back a URL. For now, we'll use a placeholder
+                              const reader = new FileReader();
+                              reader.onload = (event) => {
+                                field.onChange(event.target?.result);
+                              };
+                              reader.readAsDataURL(file);
+                            }
+                          }}
+                          disabled={!isEditing}
+                        />
+                      </div>
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
                 name="bio"
                 render={({ field }) => (
                   <FormItem>
@@ -181,6 +250,102 @@ export default function ProfileSettings() {
                   </FormItem>
                 )}
               />
+
+              {(user as { role?: string })?.role === "doctor" && (
+                <div className="space-y-6">
+                  <FormField
+                    control={form.control}
+                    name="medicalLicense"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Medical License Number</FormLabel>
+                        <FormControl>
+                          <Input
+                            {...field}
+                            disabled={!isEditing}
+                            placeholder="Enter your medical license number"
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={form.control}
+                    name="education"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Education</FormLabel>
+                        <FormControl>
+                          <Textarea
+                            {...field}
+                            disabled={!isEditing}
+                            placeholder="Enter your educational background"
+                            className="h-24"
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={form.control}
+                    name="certifications"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Certifications</FormLabel>
+                        <FormControl>
+                          <Textarea
+                            {...field}
+                            disabled={!isEditing}
+                            placeholder="List your professional certifications"
+                            className="h-24"
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={form.control}
+                    name="yearsOfExperience"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Years of Experience</FormLabel>
+                        <FormControl>
+                          <Input
+                            {...field}
+                            disabled={!isEditing}
+                            placeholder="Enter years of professional experience"
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={form.control}
+                    name="languages"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Languages Spoken</FormLabel>
+                        <FormControl>
+                          <Input
+                            {...field}
+                            disabled={!isEditing}
+                            placeholder="Enter languages you speak (comma-separated)"
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+              )}
 
               {isEditing && (
                 <Button type="submit" className="w-full">

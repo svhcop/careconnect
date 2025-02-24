@@ -24,44 +24,45 @@ function Router() {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const [userRole, setUserRole] = useState<'patient' | 'doctor' | null>(null);
+  const [roleLoading, setRoleLoading] = useState(false);
 
   useEffect(() => {
     const unsubscribe = auth.onAuthStateChanged(async (user) => {
       setUser(user);
+      setRoleLoading(true);
+      
       if (user) {
         try {
-          // Add console.log to debug
-          console.log('User authenticated:', user.uid);
+          const token = await user.getIdToken();
           const response = await fetch(`/api/users/me`, {
             headers: {
-              'Authorization': `Bearer ${await user.getIdToken()}`,
+              'Authorization': `Bearer ${token}`,
               'Content-Type': 'application/json'
             }
           });
+          
           if (!response.ok) {
             throw new Error('Failed to fetch user data');
           }
+          
           const userData = await response.json();
-          console.log('User data:', userData); // Debug log
           setUserRole(userData.role);
         } catch (error) {
           console.error('Error fetching user role:', error);
-          // Handle error gracefully
           setUserRole(null);
         }
       } else {
         setUserRole(null);
       }
+      
       setLoading(false);
+      setRoleLoading(false);
     });
 
     return () => unsubscribe();
   }, []);
 
-  // Add debug logs
-  console.log('Current state:', { user, userRole, loading });
-
-  if (loading) {
+  if (loading || (user && roleLoading)) {
     return (
       <div className="h-screen w-full flex items-center justify-center">
         <Spinner className="w-8 h-8" />
@@ -70,11 +71,14 @@ function Router() {
   }
 
   const getDashboard = () => {
-    if (!user) {
-      console.log('No user, returning to landing page');
+    if (!user || roleLoading) {
       return <LandingPage />;
     }
-    console.log('Rendering dashboard for role:', userRole);
+    
+    if (!userRole) {
+      return <div className="h-screen w-full flex items-center justify-center">Error loading user data</div>;
+    }
+    
     return userRole === 'doctor' ? <DoctorDashboard /> : <PatientDashboard />;
   };
 
