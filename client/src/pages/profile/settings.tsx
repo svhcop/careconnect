@@ -23,14 +23,15 @@ import {
 } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { auth } from "@/lib/firebase";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { uploadProfilePicture } from "@/lib/storage";
 
 const profileSchema = z.object({
   displayName: z.string().min(2),
   phoneNumber: z.string().min(10),
   specialty: z.string().optional(),
   bio: z.string().optional(),
-  profilePicture: z.string().optional(),
+  profilePicture: z.union([z.string(), z.instanceof(File)]).optional(),
   // Additional fields for doctors
   medicalLicense: z.string().optional(),
   education: z.string().optional(),
@@ -42,10 +43,38 @@ const profileSchema = z.object({
 export default function ProfileSettings() {
   const { toast } = useToast();
   const [isEditing, setIsEditing] = useState(false);
+  const queryClient = useQueryClient();
 
   const { data: user, isLoading } = useQuery({
-    queryKey: ["/api/users/me", auth.currentUser?.uid],
+    queryKey: ["user", auth.currentUser?.uid],
+    queryFn: async () => {
+      if (!auth.currentUser) {
+        throw new Error("Not authenticated");
+      }
+      try {
+        const token = await auth.currentUser.getIdToken(true); // Force refresh token
+        const response = await fetch(`${import.meta.env.VITE_API_URL}/api/users/me`, {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          },
+          credentials: "include",
+        });
+        if (response.status === 401) {
+          throw new Error("Authentication failed");
+        }
+        if (!response.ok) {
+          throw new Error("Error loading user data");
+        }
+        return response.json();
+      } catch (error) {
+        console.error('Error fetching user data:', error);
+        throw error;
+      }
+    },
     enabled: !!auth.currentUser,
+    retry: 1, // Only retry once on failure
+    staleTime: 1000 * 60 * 5, // Cache for 5 minutes
   });
 
   const form = useForm<z.infer<typeof profileSchema>>({
@@ -81,22 +110,45 @@ export default function ProfileSettings() {
     }
   }, [user, form]);
 
+  // In your existing settings.tsx file, update the onSubmit function:
+  
   const onSubmit = async (values: z.infer<typeof profileSchema>) => {
     try {
-      await fetch("/api/users/me", {
+      // If there's a new profile picture file
+      if (values.profilePicture instanceof File) {
+        try {
+          const imageUrl = await uploadProfilePicture(values.profilePicture);
+          values.profilePicture = imageUrl;
+        } catch (error) {
+          toast({
+            title: "Error",
+            description: "Failed to upload profile picture",
+            variant: "destructive",
+          });
+          return;
+        }
+      }
+  
+      // Update user profile
+      const token = await auth.currentUser?.getIdToken();
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/users/me`, {
         method: "PATCH",
         headers: {
-          "Content-Type": "application/json",
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
         },
         body: JSON.stringify(values),
         credentials: "include",
       });
-
+  
+      if (!response.ok) throw new Error("Failed to update profile");
+  
       toast({
         title: "Profile updated",
         description: "Your profile has been updated successfully.",
       });
       setIsEditing(false);
+      queryClient.invalidateQueries({ queryKey: ["user", auth.currentUser?.uid] });
     } catch (error) {
       toast({
         title: "Error",
@@ -201,7 +253,7 @@ export default function ProfileSettings() {
                     <FormLabel>Profile Picture</FormLabel>
                     <FormControl>
                       <div className="flex items-center space-x-4">
-                        {field.value && (
+                        {field.value && typeof field.value === 'string' && (
                           <img
                             src={field.value}
                             alt="Profile"
@@ -211,16 +263,10 @@ export default function ProfileSettings() {
                         <Input
                           type="file"
                           accept="image/*"
-                          onChange={async (e) => {
+                          onChange={(e) => {
                             const file = e.target.files?.[0];
                             if (file) {
-                              // Here you would typically upload to your storage service
-                              // and get back a URL. For now, we'll use a placeholder
-                              const reader = new FileReader();
-                              reader.onload = (event) => {
-                                field.onChange(event.target?.result);
-                              };
-                              reader.readAsDataURL(file);
+                              field.onChange(file);
                             }
                           }}
                           disabled={!isEditing}

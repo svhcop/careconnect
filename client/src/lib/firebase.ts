@@ -27,17 +27,14 @@ for (const envVar of requiredEnvVars) {
 
 // Initialize Firebase configuration
 const firebaseConfig = {
-  apiKey: "AIzaSyDdePiUEhJDdqRoX8a1mejgXs_mW8FWMHI",
-  authDomain: "care-mobile-6b2c5.firebaseapp.com",
-  projectId: "care-mobile-6b2c5",
-  storageBucket: "care-mobile-6b2c5.firebasestorage.app",
-  messagingSenderId: "172926597888",
-  appId: "1:172926597888:web:0ca9953536e3daf20b51e5"
+  apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
+  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
+  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID,
+  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET,
+  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
+  appId: import.meta.env.VITE_FIREBASE_APP_ID
 };
 
-console.log("Firebase configuration validated");
-
-// Initialize Firebase
 const app = initializeApp(firebaseConfig);
 export const auth = getAuth(app);
 const googleProvider = new GoogleAuthProvider();

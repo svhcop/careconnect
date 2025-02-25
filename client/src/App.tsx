@@ -19,6 +19,9 @@ import { Spinner } from "./components/ui/spinner";
 import TermsOfService from "@/pages/terms-of-service";
 import PrivacyPolicy from "@/pages/privacy-policy";
 import LearnMore from "@/pages/learn-more";
+import PrivateRoute from "./components/PrivateRoute";
+// Remove unused import since Home component is not used and file doesn't exist
+// Remove duplicate import since ProfileSettings is already imported above
 
 function Router() {
   const [user, setUser] = useState<User | null>(null);
